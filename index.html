@@ -12,7 +12,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="theme-color" content="#e7f6f8">
-<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="icon-180.png">
 <link rel="manifest" href="manifest.json">
 <title>하루의 항해</title>
 <script>
@@ -391,6 +391,17 @@ body[data-theme=lemon] .card{
   background-repeat:no-repeat;
   background-position:0 0;
 }
+
+
+/* 월간 달력: 이동 버튼은 해당 월 제목 옆에, 고급 입력은 접어서 표시 */
+.mhbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:8px 0 10px;flex-wrap:wrap}
+.mhbar .mh{font-weight:800;margin:0;font-size:16px}
+.mhnav{gap:5px;justify-content:flex-end}
+.mhnav .btn{padding:6px 10px;font-size:12px}
+.mhnav .btn:disabled{opacity:.35;cursor:not-allowed}
+.month-extra{margin-top:8px;border-top:1px solid var(--line);padding-top:8px}
+.month-extra summary{font-size:12px;color:var(--muted);padding:3px 0}
+.month-extra[open] summary{margin-bottom:8px}
 
 </style>
 </head>
@@ -1186,7 +1197,7 @@ function rowHTML(t,o){
   h+=`<span class="taskname ${t.done?'done':''}" data-act="open" data-id="${t.id}">${esc(t.name)}</span>`;
   if(isG&&ctx!=='daily')h+=`<span class="pill">${ks.filter(k=>k.done).length}/${ks.length}</span>`;
   if(tpl)h+=`<span class="pill">${repLabel(t.repeat)}</span>`;
-  if(ctx==='daily'){ if(t.rid)h+='<span class="pill">↻ 반복</span>'; }
+  if(ctx==='daily'){ if(t.parent&&T(t.parent))h+=`<span class="pill">↳ ${esc(T(t.parent).name)}</span>`; if(t.rid)h+='<span class="pill">↻ 반복</span>'; }
   if(ctx==='proj'&&!t.done){const up=t.days.filter(x=>x>=today()).sort()[0];if(up)h+=`<span class="pill">📌 ${dueLabel(up)}</span>`}
   if(t.due)h+=`<span class="pill ${t.done?'':dueCls(t.due)}">○ ${dueLabel(t.due)}</span>`;
   if(ctx==='daily')h+=`<button class="ic" title="시간 배정" data-act="sched" data-id="${t.id}">⏰</button><button class="ic" title="내일로 미루기" data-act="tmr" data-id="${t.id}">➜</button><button class="ic" title="다른 날로" data-act="pp" data-id="${t.id}">📅</button><button class="ic" title="이 날에서 빼기" data-act="unas" data-id="${t.id}">✕</button>`;
@@ -1358,7 +1369,8 @@ function evChipsHTML(d){
     return `<button class="evchip" data-act="evedit" data-id="${e.id}" style="background:${c};--ac:${deepOf(c)}" title="${esc(e.title)}"><span class="em" aria-hidden="true">${evEmoji(e)}</span><span class="et2">${esc(e.title)}</span>${multi?`<small>${dayDiff(e.date,d)+1}/${dayDiff(e.date,en)+1}일째</small>`:''}</button>`}).join('')}</div>`;
 }
 
-const shiftM=(ym,n)=>{const [y,m]=ym.split('-').map(Number);const d=new Date(y,m-1+n,1);return `${d.getFullYear()}-${pad(d.getMonth()+1)}`};
+const MIN_MONTH='2026-11';
+const shiftM=(ym,n)=>{const [y,m]=ym.split('-').map(Number);const d=new Date(y,m-1+n,1);const out=`${d.getFullYear()}-${pad(d.getMonth()+1)}`;return out<MIN_MONTH?MIN_MONTH:out};
 function evLanes(){
   const evs=S.events.filter(e=>!view.catHide[ecat(e)||'none']).map(e=>({...e,end:(e.end&&e.end>=e.date)?e.end:e.date})).sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:(a.end>b.end?-1:1));
   const le=[];evs.forEach(e=>{let i=le.findIndex(x=>x<e.date);if(i<0){i=le.length;le.push('')}le[i]=e.end;e.lane=i});return evs;
@@ -1387,7 +1399,7 @@ const KR_HOLIDAYS_2026={
 function krHoliday(d){return KR_HOLIDAYS_2026[d]||KR_FIXED_HOLIDAYS[d.slice(5)]||''}
 function monthHTML(ym,evs){
   const [y,m]=ym.split('-').map(Number),first=new Date(y,m-1,1),last=new Date(y,m,0).getDate(),hu=((y*31+m*97)*53)%360;
-  let h=`<div class="mh">${y}년 ${m}월</div><div class="mg"><div class="wd wmh">주간 메모</div>${WD.map(w=>`<div class="wd">${w}</div>`).join('')}`;
+  let h=`<div class="mhbar"><div class="mh">${y}년 ${m}월</div>${ym===view.month?`<div class="row mhnav"><button class="btn" data-act="mprev" ${ym<=MIN_MONTH?'disabled title="2026년 11월부터 볼 수 있어요"':''}>◀</button><button class="btn" data-act="mtoday">이번 달</button><button class="btn" data-act="mnext">▶</button><button class="btn" data-act="mview">${view.mmode==='one'?'스크롤로 보기':'한 달씩 보기'}</button></div>`:''}</div><div class="mg"><div class="wd wmh">주간 메모</div>${WD.map(w=>`<div class="wd">${w}</div>`).join('')}`;
   const wm=k=>`<div class="wm"><textarea data-wk="${k}" placeholder="${mmdd(k)} 주 메모" aria-label="${mmdd(k)}부터 한 주 메모">\n${esc(weekMemo(k))}</textarea></div>`;
   h+=wm(weekKey(`${ym}-01`));
   for(let i=0;i<first.getDay();i++)h+='<div></div>';
@@ -1401,13 +1413,14 @@ function monthHTML(ym,evs){
   return h+'</div>';
 }
 function pageMonth(){
-  return `<div class="top"><div><div class="title">월간</div><div class="sub">날짜 색은 마감한 날의 달성률이에요</div></div>
-   <div class="row"><button class="btn" data-act="mprev">◀</button><button class="btn" data-act="mtoday">이번 달</button><button class="btn" data-act="mnext">▶</button><button class="btn" data-act="mview">${view.mmode==='one'?'스크롤로 보기':'한 달씩 보기'}</button></div></div>
+  return `<div class="top"><div><div class="title">월간</div><div class="sub">날짜 색은 마감한 날의 달성률이에요</div></div></div>
   <div class="card"><div class="row"><label class="small"><input type="checkbox" id="showT" ${view.showT?'checked':''} style="width:auto"> 일간 할 일도 표시</label><button class="btn ${catActive()?'primary':''}" id="catBtn" data-act="catf">🏷 분류별 보기${catActive()?' · 필터 중':''}</button></div>
    <div class="catpanel" id="catPanel" ${view.catOpen?'':'hidden'}>${catPanelHTML()}</div>
-   <div class="row" style="margin-top:8px"><input type="date" id="ev_d" value="${today()}" style="width:auto;flex:none"> ~ <input type="date" id="ev_e" style="width:auto;flex:none" title="끝나는 날 (하루짜리면 비워두기)"><input id="ev_t" data-enter="eva" placeholder="중요 일정 (예: 기말고사 기간)"><button class="btn primary" data-act="eva">⭐ 추가</button></div>
-   ${evPickersInline('ev')}
-   <div class="small muted" style="margin-top:6px">여러 날 일정은 시작일~끝나는 날만 넣으면 이어진 띠로 표시돼요. 일정 띠를 한 번 누르면 양끝에 손잡이가 나와요. 손잡이를 끌면 기간이 늘고 줄어요. 띠를 꾹 눌러(PC는 그냥) 끌면 기간 그대로 다른 날로 옮겨져요. 빈 날짜를 끌면(터치는 꾹 누른 채 끌면) 여러 날 일정이 만들어져요. 선택된 띠를 다시 누르면 수정 창이 열려요. 바꾼 뒤에는 '되돌리기'가 떠요.</div></div>
+   <details class="month-extra"><summary>＋ 일정 추가 및 달력 설정</summary>
+    <div class="row" style="margin-top:10px"><input type="date" id="ev_d" value="${today()}" style="width:auto;flex:none"> ~ <input type="date" id="ev_e" style="width:auto;flex:none" title="끝나는 날 (하루짜리면 비워두기)"><input id="ev_t" data-enter="eva" placeholder="중요 일정 (예: 기말고사 기간)"><button class="btn primary" data-act="eva">⭐ 추가</button></div>
+    ${evPickersInline('ev')}
+    <div class="small muted" style="margin-top:6px">여러 날 일정은 시작일~끝나는 날만 넣으면 이어진 띠로 표시돼요. 일정 띠를 한 번 누르면 양끝에 손잡이가 나와요. 손잡이를 끌면 기간이 늘고 줄어요. 띠를 꾹 눌러(PC는 그냥) 끌면 기간 그대로 다른 날로 옮겨져요. 빈 날짜를 끌면(터치는 꾹 누른 채 끌면) 여러 날 일정이 만들어져요. 선택된 띠를 다시 누르면 수정 창이 열려요. 바꾼 뒤에는 '되돌리기'가 떠요.</div>
+   </details></div>
   <div class="card" id="mcal">${calHTML()}</div>`;
 }
 
