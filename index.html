@@ -11,7 +11,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="theme-color" content="#f7f7f5">
+<meta name="theme-color" content="#e7f6f8">
+<link rel="apple-touch-icon" href="icon-192.png">
 <link rel="manifest" href="manifest.json">
 <title>하루의 항해</title>
 <script>
@@ -162,6 +163,7 @@ label.chk{display:flex;gap:6px;align-items:center;font-size:14px;margin:8px 0}la
 .nowl{position:absolute;left:0;right:0;border-top:2px solid var(--danger);z-index:4;pointer-events:none}
 .mg{display:grid;grid-template-columns:minmax(84px,.85fr) repeat(7,1fr);gap:4px}.wd{text-align:center;font-size:11px;color:var(--muted)}
 .day{min-height:84px;border:1px solid var(--line);border-radius:10px;background:#fff;padding:5px 6px;font-size:12px;cursor:pointer;position:relative;user-select:none}
+.day .date-num{font-weight:600}.day .date-num.holiday{color:#d95c5c}.day .holiday-name{display:block;margin-top:1px;color:#d95c5c;font-size:9px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .day.today{outline:2px solid var(--accent)}.day .pt{position:absolute;right:6px;top:5px;font-size:10px;color:#555}
 .day.dover,.day.sel{outline:2px dashed var(--accent);outline-offset:-2px;background-color:var(--soft)}
 .ev{height:16px;line-height:16px;font-size:11px;margin-top:2px;border-radius:5px;padding:0 4px;white-space:nowrap;overflow:hidden;position:relative;z-index:1;color:#333}
@@ -390,16 +392,13 @@ body[data-theme=lemon] .card{
 }
 
 </style>
-<link rel="manifest" href="./manifest.webmanifest">
-<meta name="theme-color" content="#dceef7">
-<link rel="apple-touch-icon" href="./icon-192.png">
 </head>
 <body>
 <div class="bgphoto" id="bgPhoto"></div>
 <div id="themeFx" aria-hidden="true"></div>
 <div class="app">
  <aside class="sidebar">
-  <div class="logo"><svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M11.5 2v14H5z" fill="currentColor" opacity=".9"/><path d="M13 5v11h7z" fill="currentColor" opacity=".5"/><path d="M3 18h18l-2.6 4H5.6z" fill="currentColor"/></svg><div><span>하루의 항해</span><small>flexible daily planner</small></div></div>
+  <div class="logo"><img src="icon-192.png" alt="" style="width:32px;height:32px;border-radius:9px;object-fit:cover"><div><span>하루의 항해</span><small>flexible daily planner</small></div></div>
   <div class="nav" id="nav"></div>
  </aside>
  <main class="main" id="main"></main>
@@ -517,7 +516,7 @@ function readImg(f,max,q){return new Promise((res,rej)=>{const fr=new FileReader
 
 /* ============ 데이터 ============ */
 const KEY='harbor_planner_v2',SYNC='harbor_sync',QKEY='harbor_quotes_auto',BGK='harbor_bg';
-const defaults=()=>({tasks:[],days:{},fixed:[],fx:{},events:[],cats:[],weeks:{},projects:[],ddays:[],repGen:{},order:{},settings:{theme:'clean',startHour:6,endHour:24},updatedAt:0,qhist:[]});
+const defaults=()=>({tasks:[],days:{},fixed:[],fx:{},events:[],cats:[],weeks:{},projects:[],ddays:[],repGen:{},order:{},settings:{theme:'clean',startHour:9,endHour:24},updatedAt:0,qhist:[]});
 function load(){try{const r=JSON.parse(localStorage.getItem(KEY));if(r){const d=defaults();Object.assign(d,r);d.settings=Object.assign(defaults().settings,r.settings||{});d.ddays=d.ddays||[];d.cats=d.cats||[];d.weeks=d.weeks||{};return d}}catch(e){}return defaults()}
 let S=load();
 function save(){S.updatedAt=Date.now();try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){toast('⚠ 저장 공간이 부족해요. 설정에서 내보내기로 백업한 뒤 사진을 정리해 주세요',null,null,8000)}push()}
@@ -547,9 +546,9 @@ const sortTop=a=>[...a].sort((x,y)=>(x.done-y.done)||(gKey(x)<gKey(y)?-1:gKey(x)
 const dueCls=d=>d<today()?'late':d<=addDays(today(),1)?'soon':'';
 const bTitle=b=>b.taskId&&T(b.taskId)?T(b.taskId).name:(b.title||'일정');
 
-/* 완료 기록은 3주(21일) 뒤 자동 삭제 (진행 중인 항로 안의 항목은 항로와 함께 관리) */
+/* 완료 기록은 3일 뒤 자동 삭제 (진행 중인 항로 안의 항목은 항로와 함께 관리) */
 function purge(){
-  const cut=Date.now()-21*864e5;let ch=false;
+  const cut=Date.now()-3*864e5;let ch=false;
   S.projects.filter(p=>p.done&&p.doneAt&&p.doneAt<cut).forEach(p=>{S.tasks.filter(t=>t.proj===p.id).forEach(t=>{if(T(t.id))delTask(t.id)});S.projects=S.projects.filter(x=>x.id!==p.id);ch=true});
   S.tasks.filter(t=>t.done&&t.doneAt&&t.doneAt<cut&&!t.proj&&!t.repeat).forEach(t=>{
     if(!T(t.id))return;const p=t.parent&&T(t.parent);if(p&&!p.done)return;delTask(t.id);ch=true});
@@ -1224,7 +1223,7 @@ function pageDaily(){
    <div class="card" data-drop="1"><div class="row between"><b>할 일</b><span class="small muted">${ORD()['day:'+d]?`<button class="btn" data-act="resort" data-key="day:${d}">↕ 기한순으로 다시 정렬</button> `:''}${p==null?'—':p+'%'}</span></div>
     ${ts.length?ts.map(t=>rowHTML(t,{ctx:'daily',d,okey:'day:'+d,hnd:true})).join(''):`<div class="empty">아직 배치된 일이 없어요.<br>아래에서 끌어오거나 새로 적어요.</div>`}
     <div class="row" style="margin-top:10px"><input id="nt" data-enter="addd" placeholder="오늘의 할 일 추가"><button class="btn primary" data-act="addd">추가</button></div>
-    <label class="small muted"><input type="checkbox" id="keep" checked style="width:auto"> 전체 할 일에도 남기기</label>
+    <label class="small muted"><input type="checkbox" id="keep" style="width:auto"> 전체 할 일에도 남기기</label>
     <div class="row between" style="margin-top:10px"><span class="small muted">${dr.closed?`마감됨 · ${dr.closed.rate}%`:''}</span><button class="btn" data-act="closeday">하루 마감 · 달성률</button></div></div>
    <div class="card"><div class="row between"><b>가져오기</b><span class="small muted">끌어다 놓거나 ＋</span></div>${chips}
     <div class="pick">${pickHTML}</div></div>
@@ -1262,7 +1261,7 @@ function pageTasks(){
   ${chips}
   <div class="card"><div class="row"><input id="at" data-enter="adda" placeholder="${view.fAll?'이 항로에 추가':'할 일 적기'}"><input type="date" id="ad" style="width:auto;flex:none"><label class="small"><input type="checkbox" id="as" style="width:auto"> ★</label><button class="btn primary" data-act="adda">추가</button>${view.fAll?'':'<button class="btn" data-act="addrep">🔁 반복</button>'}</div></div>
   <div class="card">${ORD()[rk]?`<div class="row" style="margin-bottom:8px"><button class="btn" data-act="resort" data-key="${rk}">↕ 기한순으로 다시 정렬</button></div>`:''}${list}</div>
-  <div class="small muted">완료한 일은 3일이 지나면 이 목록에서 숨겨지고 완료 기록에 남아요 (3주 뒤 자동 삭제).</div>`;
+  <div class="small muted">완료한 일은 3일이 지나면 이 목록에서 숨겨지고 완료 기록에 남아요 (3일 뒤 자동 삭제).</div>`;
 }
 
 function pageProj(){
@@ -1366,6 +1365,22 @@ function evBar(e,d){
   if(view.evSel===e.id)cl.push('sel');
   return `<div class="${cl.join(' ')}" data-evid="${e.id}" data-evday="${d}" data-act="evsel" data-id="${e.id}" style="background:${evColor(e)}">${st?'<i class="eh l" data-side="l"></i>':''}<span class="et">${showT?(single?'⭐ ':'')+esc(e.title):'&nbsp;'}</span>${en?'<i class="eh r" data-side="r"></i>':''}</div>`;
 }
+// 대한민국 공휴일 표시: 2026년 확정 일정 + 매년 날짜가 고정된 주요 공휴일
+const KR_FIXED_HOLIDAYS={
+ '01-01':'신정','03-01':'삼일절','05-01':'노동절','05-05':'어린이날',
+ '06-06':'현충일','07-17':'제헌절','08-15':'광복절','10-03':'개천절',
+ '10-09':'한글날','12-25':'성탄절'
+};
+const KR_HOLIDAYS_2026={
+ '2026-01-01':'신정','2026-02-16':'설날 연휴','2026-02-17':'설날','2026-02-18':'설날 연휴',
+ '2026-03-01':'삼일절','2026-03-02':'삼일절 대체공휴일',
+ '2026-05-01':'노동절','2026-05-05':'어린이날','2026-05-24':'부처님오신날','2026-05-25':'부처님오신날 대체공휴일',
+ '2026-06-03':'지방선거일','2026-06-06':'현충일','2026-07-17':'제헌절',
+ '2026-08-15':'광복절','2026-08-17':'광복절 대체공휴일',
+ '2026-09-24':'추석 연휴','2026-09-25':'추석','2026-09-26':'추석 연휴',
+ '2026-10-03':'개천절','2026-10-05':'개천절 대체공휴일','2026-10-09':'한글날','2026-12-25':'성탄절'
+};
+function krHoliday(d){return KR_HOLIDAYS_2026[d]||KR_FIXED_HOLIDAYS[d.slice(5)]||''}
 function monthHTML(ym,evs){
   const [y,m]=ym.split('-').map(Number),first=new Date(y,m-1,1),last=new Date(y,m,0).getDate(),hu=((y*31+m*97)*53)%360;
   let h=`<div class="mh">${y}년 ${m}월</div><div class="mg"><div class="wd wmh">주간 메모</div>${WD.map(w=>`<div class="wd">${w}</div>`).join('')}`;
@@ -1377,7 +1392,7 @@ function monthHTML(ym,evs){
     const bg=rt!=null?`background:hsla(${hu},65%,55%,${(.1+rt/100*.55).toFixed(2)})`:'';
     let bars='';if(cov.length){const mx=Math.max(...cov.map(e=>e.lane));for(let i=0;i<=mx;i++){const e=cov.find(x=>x.lane===i);bars+=e?evBar(e,d):'<div class="ev"></div>'}}
     if(n>1&&parse(d).getDay()===0)h+=wm(d);
-    h+=`<div class="day ${d===today()?'today':''}" data-act="mday" data-d="${d}" style="${bg}"><div>${n}</div>${rt!=null?`<span class="pt">${rt}%</span>`:''}${bars}${view.showT?dayTasks(d).slice(0,4).map(t=>`<div class="mt ${t.done?'done':''}">${t.done?'☑':'☐'} ${esc(t.name)}</div>`).join('')+(dayTasks(d).length>4?`<div class="mt">+${dayTasks(d).length-4}</div>`:''):''}</div>`;
+    const holiday=krHoliday(d);h+=`<div class="day ${d===today()?'today':''}" data-act="mday" data-d="${d}" style="${bg}"><div class="date-num ${holiday?'holiday':''}">${n}</div>${holiday?`<span class="holiday-name" title="${esc(holiday)}">${esc(holiday)}</span>`:''}${rt!=null?`<span class="pt">${rt}%</span>`:''}${bars}${view.showT?dayTasks(d).slice(0,4).map(t=>`<div class="mt ${t.done?'done':''}">${t.done?'☑':'☐'} ${esc(t.name)}</div>`).join('')+(dayTasks(d).length>4?`<div class="mt">+${dayTasks(d).length-4}</div>`:''):''}</div>`;
   }
   return h+'</div>';
 }
@@ -1408,7 +1423,7 @@ function ddArc(){
   return L.length?L.map(x=>`<div class="task"><span class="taskname">🎯 ${esc(x.name)}<span class="muted small"> · ${x.date.replace(/-/g,'.')} · ${fmtD(new Date(x.doneAt)).replace(/-/g,'.')} 완료</span></span><button class="btn" data-act="ddundo" data-id="${x.id}">되돌리기</button></div>`).join(''):'<div class="empty">완료한 D-day가 없어요.</div>';
 }
 function pageArchive(){
-  return `<div class="top"><div><div class="title">완료 기록</div><div class="sub">완료한 지 3주가 지나면 자동으로 삭제돼요 · 잘못 체크했다면 되돌리기</div></div></div>
+  return `<div class="top"><div><div class="title">완료 기록</div><div class="sub">완료한 지 3일이 지나면 자동으로 삭제돼요 · 잘못 체크했다면 되돌리기</div></div></div>
   <div class="card"><input id="aq" placeholder="검색 (예: 약물학)" value="${esc(view.q)}"><div id="arcl">${arcList()}</div></div>
   <div class="card"><b>완료한 항로</b><div id="parc" style="margin-top:6px">${projArc()}</div></div>
   <div class="card"><b>완료한 D-day</b><div id="darc" style="margin-top:6px">${ddArc()}</div></div>`;
@@ -1435,7 +1450,7 @@ function pageSettings(){
   <div class="card"><b>테마</b><div class="row" style="margin-top:10px">${Object.entries(THEMES).map(([k,n])=>`<button class="btn ${s.theme===k?'primary':''}" data-act="theme" data-v="${k}">${n}</button>`).join('')}</div><label class="chk" style="margin-top:14px"><input type="checkbox" id="nomo" ${nomoOn()?'checked':''}> 배경 움직임 끄기</label><div class="small muted">테마 배경의 느린 움직임(윤슬·구름·잎사귀 등)을 멈춰요. 이 기기에만 적용되고, 기기의 '동작 줄이기' 설정이 켜져 있으면 자동으로 멈춰요.</div>
    <b style="display:block;margin-top:16px">배경 사진 (선택)</b><div class="small muted" style="margin:4px 0 8px">바다 윤슬 사진 같은 걸 올리면 테마 위에 은은하게 깔려요. 이 기기에만 저장돼요.</div>
    <div class="row"><label class="btn">사진 고르기<input type="file" id="bgIn" accept="image/*" style="display:none"></label>${hasBg?'<button class="btn danger" data-act="bgdel">배경 사진 지우기</button>':''}</div>
-   <b style="display:block;margin-top:16px">시간표 표시 범위</b><div class="row" style="margin-top:8px"><input type="number" data-set="startHour" min="0" max="12" value="${s.startHour}" style="max-width:80px;flex:none"> 시 ~ <input type="number" data-set="endHour" min="13" max="24" value="${s.endHour}" style="max-width:80px;flex:none"> 시</div></div>
+   <b style="display:block;margin-top:16px">시간표 표시 범위</b><div class="row" style="margin-top:8px"><input type="number" data-set="startHour" min="0" max="12" value="${s.startHour}" style="max-width:80px;flex:none"> 시 ~ <input type="number" data-set="endHour" min="13" max="30" value="${s.endHour}" style="max-width:80px;flex:none"> 시</div></div>
   ${soundCard()}
   <div class="card"><b>고정 시간표</b><div class="small muted">기간 안의 해당 요일에 일간 시간표로 자동으로 들어가고, 기간이 끝나면 안 보여요. 고정 일정은 알림 소리가 나지 않아요.</div>
    ${ORD().fixed?`<div style="margin:8px 0"><button class="btn" data-act="resort" data-key="fixed">↕ 기본 순서로 되돌리기</button></div>`:''}${ordList('fixed',S.fixed,null).map(f=>`<div class="task" data-ok="fixed" data-oid="${f.id}"><span class="hnd">⠿</span><span class="taskname">🔒 ${esc(f.title)} <span class="muted small">${f.days.map(x=>WD[x]).join('')} ${tm(f.s)}-${tm(f.e)} · ${f.from}~${f.to}${f.to<today()?' (기간 끝)':''}</span></span><button class="ic" data-act="fxdel" data-id="${f.id}">🗑</button></div>`).join('')||'<div class="empty">아직 없어요</div>'}
